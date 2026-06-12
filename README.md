@@ -10,6 +10,13 @@ forking the core.
 
 v0.1 — usable. Core commands all functional. Plugin contract stable.
 
+## Requirements
+
+- Python ≥ 3.12
+- `git` ≥ 2.48 (for `worktree.useRelativePaths`)
+- `gh` (only for `ok prune`'s PR classification — degrades gracefully if absent)
+- `uv` (for `ok self install` / `ok self update`)
+
 ## Install
 
 ```sh
