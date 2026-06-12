@@ -24,6 +24,15 @@ def test_walk_up_finds_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
 
 def test_walk_up_missing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("ORGKIT_CONFIG", raising=False)
+    # Skip if a real .ok.toml exists anywhere above tmp_path (host pollution).
+    cur = tmp_path
+    while True:
+        if (cur / CONFIG_FILENAME).is_file():
+            pytest.skip(f"host has {cur / CONFIG_FILENAME}; cannot test missing-case")
+        parent = cur.parent
+        if parent == cur:
+            break
+        cur = parent
     monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
     with pytest.raises(ConfigError, match=r"no \.ok\.toml found"):
         find_config(tmp_path)

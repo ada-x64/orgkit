@@ -27,7 +27,11 @@ app = typer.Typer(
 app.command("sync", context_settings=_STRICT, help="Sync the local clone-tree of org repos.")(
     sync.main
 )
-app.command("prune", context_settings=_STRICT, help="Prune already-merged worktrees.")(prune.main)
+app.command(
+    "prune",
+    context_settings={**_STRICT, "allow_extra_args": False},
+    help="Classify and optionally prune local branches across repos.",
+)(prune.main)
 app.add_typer(stack.app, name="stack", help="Stacked-branch helpers (uses --update-refs).")
 app.add_typer(self_cmd.app, name="self", help="Manage orgkit itself and its plugin.")
 app.add_typer(config_cmd.app, name="config", help="Inspect orgkit configuration.")

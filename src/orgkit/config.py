@@ -32,6 +32,7 @@ class ConfigError(Exception):
 class ReposConfig:
     url: str | None = None
     inline: tuple[str, ...] = ()
+    extra: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,7 @@ class OrgConfig:
     root: Path  # directory containing it
     default_branch: str = "main"
     remote: str = "origin"
+    protected_worktrees: tuple[str, ...] = ("active",)
     core: CoreConfig = field(default_factory=CoreConfig)
     repos: ReposConfig = field(default_factory=ReposConfig)
     plugin: PluginConfig = field(default_factory=PluginConfig)
@@ -98,9 +100,16 @@ def find_config(start: Path | None = None) -> Path:
 # Parsing
 # ---------------------------------------------------------------------------
 
-_KNOWN_TOP = {"default_branch", "remote", "core", "repos", "plugin"}
+_KNOWN_TOP = {
+    "default_branch",
+    "remote",
+    "protected_worktrees",
+    "core",
+    "repos",
+    "plugin",
+}
 _KNOWN_CORE = {"disable"}
-_KNOWN_REPOS = {"url", "inline"}
+_KNOWN_REPOS = {"url", "inline", "extra"}
 _KNOWN_PLUGIN = {"path", "uv-tool", "import"}
 
 
@@ -122,6 +131,10 @@ def parse_config(path: Path) -> OrgConfig:
     if not isinstance(remote, str):
         errors.append("remote must be a string")
 
+    protected_worktrees = tuple(raw.get("protected_worktrees", ("active",)) or ())
+    if not all(isinstance(x, str) for x in protected_worktrees):
+        errors.append("protected_worktrees must be a list of strings")
+
     core_raw = raw.get("core") or {}
     if not isinstance(core_raw, dict):
         errors.append("[core] must be a table")
@@ -138,10 +151,13 @@ def parse_config(path: Path) -> OrgConfig:
     errors.extend(_check_unknown("repos", repos_raw, _KNOWN_REPOS))
     url = repos_raw.get("url")
     inline = tuple(repos_raw.get("inline", ()) or ())
+    extra = tuple(repos_raw.get("extra", ()) or ())
     if url is not None and not isinstance(url, str):
         errors.append("[repos].url must be a string")
     if not all(isinstance(x, str) for x in inline):
         errors.append("[repos].inline must be a list of strings")
+    if not all(isinstance(x, str) for x in extra):
+        errors.append("[repos].extra must be a list of strings")
     if url and inline:
         errors.append("[repos]: set either url or inline, not both")
 
@@ -165,8 +181,9 @@ def parse_config(path: Path) -> OrgConfig:
         root=path.parent,
         default_branch=default_branch,
         remote=remote,
+        protected_worktrees=protected_worktrees,
         core=CoreConfig(disable=disable),
-        repos=ReposConfig(url=url, inline=inline),
+        repos=ReposConfig(url=url, inline=inline, extra=extra),
         plugin=PluginConfig(path=p_path, uv_tool=p_uv, import_=p_imp),
     )
 
